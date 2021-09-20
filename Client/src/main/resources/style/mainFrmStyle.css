@@ -1,0 +1,31 @@
+.button{
+    -fx-min-width: 35;
+    -fx-min-height: 35;
+    -fx-background-size: 29 29;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position:center;
+}
+
+.setupButton {
+    -fx-background-image: url("../image/gear.png");
+
+}
+
+.exitButton {
+    -fx-background-image: url("../image/power.png");
+}
+.insertButton {
+    -fx-background-image: url("../image/insert.png");
+}
+.copyButton {
+    -fx-background-image: url("../image/copy.png");
+}
+.cutButton {
+    -fx-background-image: url("../image/cut.png");
+}
+.trashButton {
+    -fx-background-image: url("../image/trash.png");
+}
+.upButton {
+    -fx-background-image: url("../image/arrow-up.png");
+}

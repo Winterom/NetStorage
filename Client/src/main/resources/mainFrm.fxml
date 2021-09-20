@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox alignment="center" stylesheets="style/mainFrmStyle.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clientGUI.MainController">
+    <ToolBar>
+        <Button focusTraversable="false" styleClass="setupButton" onAction="#openSetupStage">
+            <tooltip>
+                <Tooltip text="Параметры" />
+            </tooltip>
+        </Button>
+        <Separator />
+        <Button focusTraversable="false" styleClass="copyButton">
+            <tooltip>
+                <Tooltip text="Копировать" />
+            </tooltip>
+        </Button>
+        <Button focusTraversable="false" styleClass="insertButton">
+            <tooltip>
+                <Tooltip text="Вставить" />
+            </tooltip>
+        </Button>
+        <Button focusTraversable="false" styleClass="cutButton">
+            <tooltip>
+                <Tooltip text="Вырезать" />
+            </tooltip>
+        </Button>
+        <Button focusTraversable="false" styleClass="trashButton">
+            <tooltip>
+                <Tooltip text="Удалить" />
+            </tooltip>
+        </Button>
+
+        <Button focusTraversable="false" styleClass="exitButton" onAction="#exitProgram">
+            <tooltip>
+                <Tooltip text="Выход" />
+            </tooltip>
+        </Button>
+      <VBox.margin>
+         <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
+      </VBox.margin>
+    </ToolBar>
+    <HBox spacing="5">
+        <TextField editable="false" focusTraversable="false" minHeight="35" HBox.hgrow="ALWAYS">
+        </TextField>
+        <Button focusTraversable="false" styleClass="upButton" />
+      <VBox.margin>
+         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+      </VBox.margin>
+    </HBox>
+    <TableView VBox.vgrow="ALWAYS">
+      <padding>
+         <Insets bottom="5.0" left="5.0" right="5.0" />
+      </padding>
+      <VBox.margin>
+         <Insets />
+      </VBox.margin></TableView>
+    <HBox spacing="5.0">
+        <Label text="Занятое пространство: ">
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding></Label>
+        <ProgressBar minWidth="300">
+         <padding>
+            <Insets top="5.0" />
+         </padding></ProgressBar>
+        <Label text="Ping: ">
+         <padding>
+            <Insets bottom="5.0" right="5.0" top="5.0" />
+         </padding>
+         <HBox.margin>
+            <Insets />
+         </HBox.margin></Label>
+    </HBox>
+    <HBox spacing="5">
+        <Label HBox.hgrow="ALWAYS" text="Здесь будут сообщения от сервера">
+            <padding>
+                <Insets bottom="5.0" left="5.0" top="5.0" />
+            </padding>
+        </Label>
+    </HBox>
+</VBox>
