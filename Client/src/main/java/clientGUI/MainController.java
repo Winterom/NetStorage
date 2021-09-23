@@ -1,5 +1,6 @@
 package clientGUI;
 
+import app.AppProperties;
 import app.ClientNet;
 import app.FileInfo;
 import javafx.beans.property.SimpleObjectProperty;
@@ -46,6 +47,8 @@ public class MainController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+
+
         ClientNet clientNet = new ClientNet();
         Thread thread = new Thread(clientNet);
         thread.setDaemon(true);
