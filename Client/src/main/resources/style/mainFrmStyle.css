@@ -11,9 +11,6 @@
 
 }
 
-.exitButton {
-    -fx-background-image: url("../image/power.png");
-}
 .insertButton {
     -fx-background-image: url("../image/insert.png");
 }
@@ -28,4 +25,8 @@
 }
 .upButton {
     -fx-background-image: url("../image/arrow-up.png");
+}
+
+.messageLabel {
+    -fx-text-fill: red;
 }

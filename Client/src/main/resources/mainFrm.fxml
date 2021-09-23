@@ -5,19 +5,20 @@
 <?import javafx.scene.layout.*?>
 
 <VBox alignment="center" stylesheets="style/mainFrmStyle.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clientGUI.MainController">
-    <ToolBar>
-        <Button focusTraversable="false" styleClass="setupButton" onAction="#openSetupStage">
+
+    <ToolBar HBox.hgrow="ALWAYS">
+        <Button focusTraversable="false" styleClass="setupButton" onAction="#openPropertiesStage">
             <tooltip>
                 <Tooltip text="Параметры" />
             </tooltip>
         </Button>
         <Separator />
-        <Button focusTraversable="false" styleClass="copyButton">
+        <Button focusTraversable="false" styleClass="copyButton" onAction="#copyPathToClipboard">
             <tooltip>
                 <Tooltip text="Копировать" />
             </tooltip>
         </Button>
-        <Button focusTraversable="false" styleClass="insertButton">
+        <Button fx:id="insertButton" focusTraversable="false" styleClass="insertButton" onAction="#insertFile">
             <tooltip>
                 <Tooltip text="Вставить" />
             </tooltip>
@@ -27,30 +28,22 @@
                 <Tooltip text="Вырезать" />
             </tooltip>
         </Button>
-        <Button focusTraversable="false" styleClass="trashButton">
+        <Button focusTraversable="false" styleClass="trashButton" onAction="#deleteFile">
             <tooltip>
                 <Tooltip text="Удалить" />
             </tooltip>
         </Button>
-
-        <Button focusTraversable="false" styleClass="exitButton" onAction="#exitProgram">
-            <tooltip>
-                <Tooltip text="Выход" />
-            </tooltip>
-        </Button>
-      <VBox.margin>
-         <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
-      </VBox.margin>
     </ToolBar>
+
     <HBox spacing="5">
-        <TextField editable="false" focusTraversable="false" minHeight="35" HBox.hgrow="ALWAYS">
+        <TextField fx:id="pathField" editable="false" focusTraversable="false" minHeight="35" HBox.hgrow="ALWAYS">
         </TextField>
-        <Button focusTraversable="false" styleClass="upButton" />
+        <Button focusTraversable="false" styleClass="upButton" onAction="#btnUpPathAction"/>
       <VBox.margin>
          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
       </VBox.margin>
     </HBox>
-    <TableView VBox.vgrow="ALWAYS">
+    <TableView fx:id="fileInfoTableView" VBox.vgrow="ALWAYS">
       <padding>
          <Insets bottom="5.0" left="5.0" right="5.0" />
       </padding>
@@ -75,7 +68,7 @@
          </HBox.margin></Label>
     </HBox>
     <HBox spacing="5">
-        <Label HBox.hgrow="ALWAYS" text="Здесь будут сообщения от сервера">
+        <Label fx:id="messageLabel" styleClass="messageLabel" HBox.hgrow="ALWAYS" text="Здесь будут системные сообщения ">
             <padding>
                 <Insets bottom="5.0" left="5.0" top="5.0" />
             </padding>

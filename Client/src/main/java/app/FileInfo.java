@@ -1,16 +1,21 @@
 package app;
 
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
+@Slf4j
 public class FileInfo {
-
+    //Основная цель по расширению подставлять соответствующие значки в таблицу
     public enum FileType { FILE("F"), DIRECTORY ("D"),WORD("W"),
         EXCEl("E"),PDF("PDF"),BMP("BMP"),JPEG("JPEG"),
         GIF("GIF"),PNG("PNG"),PSD("PSD"),MP3("MP3"),AVI("AVI"),
-        ZIP("ZIP"),PPT("PPT"),HTML("HTML"),JS("JS"), ANY("ANY");
-        private String name;
+        ZIP("ZIP"),PPT("PPT"),HTML("HTML"),JS("JS");
+        private final String name;
         FileType (String name) {
             this.name = name;
         }
@@ -20,54 +25,29 @@ public class FileInfo {
         }
     }
 
+    @lombok.Setter @lombok.Getter
     private String fileName;
+    @lombok.Setter @lombok.Getter
     private FileType fileType;
+    @lombok.Setter @lombok.Getter
     private long size;
+    @lombok.Setter @lombok.Getter
     private LocalDateTime lastModified;
+    @lombok.Setter @lombok.Getter
     private boolean fileSynchronized;
 
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public FileType getFileType() {
-        return fileType;
-    }
-
-    public void setFileType(FileType fileType) {
-        this.fileType = fileType;
-    }
-
-    public long getSize() {
-        return size;
-    }
-
-    public void setSize(long size) {
-        this.size = size;
-    }
-
-    public LocalDateTime getLastModified() {
-        return lastModified;
-    }
-
-    public void setLastModified(LocalDateTime lastModified) {
-        this.lastModified = lastModified;
-    }
-
-    public boolean isFileSynchronized() {
-        return fileSynchronized;
-    }
-
-    public void setFileSynchronized(boolean fileSynchronized) {
-        this.fileSynchronized = fileSynchronized;
-    }
 
     public FileInfo(Path path) {
         this.fileName = path.getFileName().toString();
-        this.size = Files.size(path);
+        try {
+            this.size = Files.size(path);
+            this.fileType = Files.isDirectory(path)?FileType.DIRECTORY:FileType.FILE;
+            if (fileType==FileType.DIRECTORY)
+                this.size = -1;
+            this.lastModified = LocalDateTime.ofInstant(Files.getLastModifiedTime(path).toInstant(), ZoneId.systemDefault());
+
+        } catch (IOException e) {
+            log.error("Stacktrace ",e);
+        }
     }
 }
