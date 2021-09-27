@@ -1,26 +1,30 @@
 package app;
 
 
+import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
+import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import lombok.extern.slf4j.Slf4j;
+import message.FileInfo;
+import message.FileMessage;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
+import java.nio.file.Path;
 
 
 @Slf4j
 public class ClientNet implements Runnable {
-    private final int PORT = 8089;
-    private final byte[] buffer = new byte[1024];
-    DataOutputStream os;
-    DataInputStream is;
+
+    ObjectEncoderOutputStream os;
+    ObjectDecoderInputStream is;
     Socket socket;
 
     @Override
     public void run() {
         try {
-            socket = new Socket("localhost", PORT);
-            os = new DataOutputStream(socket.getOutputStream());
-            is = new DataInputStream(socket.getInputStream());
+            socket = new Socket(AppProperties.getHOST(),AppProperties.getPORT());
+            os = new ObjectEncoderOutputStream(socket.getOutputStream());
+            is = new ObjectDecoderInputStream(socket.getInputStream());
             while (true) {
                 String msg = is.readUTF();
                 log.debug("received from server: " + msg);
@@ -34,34 +38,32 @@ public class ClientNet implements Runnable {
 
     }
 
-    public void sendFileToServer(String path) {
-        File file = new File(path);
-        if (!file.exists()) {
-            return;
-        }
-        String fileName = file.getName();
-        long fileSize = file.length();
-
-        try(InputStream filestream = new FileInputStream(path)) {
-            os.writeUTF(fileName);
-            os.writeLong(fileSize);
-            int read;
-            while ((read = filestream.read(buffer)) != -1) {
-                os.write(buffer, 0, read);
-            }
+    public void sendFileToServer(FileInfo fileInfo) {
+        try {
+            //Перекидка из Path в String и обратно нужна потому что объект Path не сериализуемый
+            //
+            Path tempPath = Path.of(AppProperties.getInstance().getRootDir());
+            fileInfo.setRelativizePath(tempPath.relativize(Path.of(fileInfo.getFullPath())).toString());
+            os.writeObject(new FileMessage(fileInfo));
             os.flush();
         } catch (IOException e) {
-            log.error("stacktrace ", e);
+            log.error(e.toString());
         }
     }
 
     public void closeStream() {
         try {
-            os.close();
-            is.close();
-            socket.close();
+            if (os !=null){
+                os.close();
+            }
+            if (is !=null){
+                is.close();
+            }
+            if (socket !=null){
+                socket.close();
+            }
         } catch (IOException e) {
-            log.error("stacktrace: ", e);
+            log.error(e.toString());
         }
     }
 }
