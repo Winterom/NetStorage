@@ -2,7 +2,6 @@ package clientGUI;
 
 import app.AppProperties;
 import app.ClientNet;
-import app.FileInfo;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -20,6 +19,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import message.FileInfo;
 
 import java.io.IOException;
 import java.net.URL;
@@ -47,12 +47,17 @@ public class MainController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-
+        if (AppProperties.getInstance().getRootDir().isEmpty()||
+                AppProperties.getInstance().getLogin().isEmpty()||
+                AppProperties.getInstance().getPassword().isEmpty()){
+            openPropertiesStage(null);
+        }
 
         ClientNet clientNet = new ClientNet();
         Thread thread = new Thread(clientNet);
         thread.setDaemon(true);
         thread.start();
+
         insertButton.setDisable(true);//Сначало надо что то скопировать в буфер
 
         //Настройка колонок таблицы
@@ -134,13 +139,13 @@ public class MainController implements Initializable {
                     if (Files.isDirectory(path)) {
                         updateFileList(path);
                     }else {
-                        clientNet.sendFileToServer(path.toString());//пока nio не знаем передаем в сироке
+                        clientNet.sendFileToServer(fileInfoTableView.getSelectionModel().getSelectedItem());
                     }
                 }
             }
         });
 
-        updateFileList(Paths.get("."));
+        updateFileList(Paths.get(AppProperties.getInstance().getRootDir()));
     }
 
 
@@ -150,20 +155,23 @@ public class MainController implements Initializable {
             Stage setupStage = new Stage();
             setupStage.initStyle(StageStyle.UTILITY);
             setupStage.setTitle("Настройки");
-            setupStage.initModality(Modality.WINDOW_MODAL);
+            setupStage.initModality(Modality.APPLICATION_MODAL);
             Scene scene = new Scene(setupPage);
             setupStage.setScene(scene);
-            setupStage.show();
+            setupStage.showAndWait();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void btnUpPathAction(ActionEvent actionEvent) {
+        Path oldPath = Paths.get(pathField.getText());
         Path parentPath = Paths.get(pathField.getText()).getParent();
-        if (parentPath != null) {
-            updateFileList(parentPath);
+        if (oldPath.relativize(parentPath).toString().equals("..")){
+            updateFileList(Path.of(AppProperties.getInstance().getRootDir()));
+            return;
         }
+        updateFileList(parentPath);
     }
 
     public void updateFileList(Path path) {

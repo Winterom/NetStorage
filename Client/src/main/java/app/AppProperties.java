@@ -1,24 +1,34 @@
 package app;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
 @Slf4j
 public class AppProperties {
+    private static final int MIN_LOGIN_LENGTH =4;
+    private static final int MIN_PASSWORD_LENGTH =6;
+    @Getter
+    private static final int PORT = 8089;
+    @Getter
+    private static final String HOST = "localhost";
+
     private static volatile AppProperties instance;
-    @Getter
-    private Path rootDir;
-    @Getter
-    private String login;
-    @Getter
-    private String password;
+    @Getter@Setter
+    private String rootDir="";
+    @Getter@Setter
+    private boolean sendStacktraceToServer;
+    @Getter@Setter
+    private String login="";
+    @Getter@Setter
+    private String password="";
+
+    Properties prop;
 
 
     public static AppProperties getInstance(){
@@ -35,24 +45,50 @@ public class AppProperties {
 
     //наверное не очень хорошо вызывать в конструкторе
     //методы которые могут кинуть исключение
-    private AppProperties(){
-        try {
-            if(!Files.exists(Path.of("config.properties"))){
-                Files.createFile(Path.of("config.properties"));
-
+    private AppProperties() {
+        this.prop = new Properties();
+            if (!Files.exists(Path.of("config.properties"))) {
+                savePropertiesFile();
             }
-        }catch (IOException e){
-            log.error("stacktrace ",e);
-        }
-
         try (InputStream input = new FileInputStream("config.properties")) {
-            Properties prop = new Properties();
+
             prop.load(input);
-            rootDir = Path.of(prop.getProperty("rootDir"));
+            rootDir = prop.getProperty("rootDir");
             login = prop.getProperty("login");
             password = prop.getProperty("password");
+            sendStacktraceToServer = prop.getProperty("sendError").equals("Yes");
+
         }catch (IOException e){
             log.error("stacktrace ",e);
         }
+    }
+
+    public void savePropertiesFile(){
+        try (OutputStream fos = Files.newOutputStream(Path.of("config.properties"));){
+            prop.setProperty("rootDir", rootDir);
+            prop.setProperty("login", login);
+            prop.setProperty("password", password);
+            if (sendStacktraceToServer){
+                prop.setProperty("sendError","Yes");
+            }else prop.setProperty("sendError","No");
+            prop.store(fos,null);
+        }catch (IOException e) {
+            log.error("stacktrace ", e);
+        }
+    }
+
+    public static boolean validateDirectory(Path dir){
+        try {
+            return Files.exists(dir) & Files.isDirectory(dir) & (Files.list(dir).count() == 0);
+        } catch (IOException e) {
+           log.error("stacktrace ",e);
+        }
+        return false;
+    }
+    public static boolean validateLogin(String newLogin){
+        return  (newLogin.length()> MIN_LOGIN_LENGTH);
+    }
+    public static boolean validationPassword(String newPassword){
+        return  (newPassword.length()>MIN_PASSWORD_LENGTH);
     }
 }

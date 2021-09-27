@@ -4,28 +4,30 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clientGUI.PropertiesFrmController">
+<AnchorPane stylesheets="style/propFrmStyle.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clientGUI.PropertiesFrmController">
 
     <VBox spacing="5">
         <Label text="Расположение папки для синхронизации " />
         <HBox spacing="2">
-            <TextField HBox.hgrow="ALWAYS" />
-            <Button text="..." />
+            <TextField HBox.hgrow="ALWAYS" fx:id="rootDir"/>
+            <Button text="..." onAction="#changeDirectory"/>
         </HBox>
-        <CheckBox text="Отправлять сведения об ошибках на сервер"/>
+        <CheckBox text="Отправлять сведения об ошибках на сервер" fx:id="sendError"/>
         <Label text="Параметры аутентификации" />
         <HBox spacing="3">
             <Label text="Логин  " />
-            <TextField HBox.hgrow="ALWAYS" />
+            <TextField HBox.hgrow="ALWAYS" fx:id="login"/>
         </HBox>
         <HBox spacing="3">
             <Label text="Пароль" />
-            <PasswordField HBox.hgrow="ALWAYS" />
+            <PasswordField HBox.hgrow="ALWAYS" fx:id="password"/>
         </HBox>
-        <HBox spacing="5" alignment="BASELINE_RIGHT">
-            <Button text="Сохранить" />
-            <Button text="Отмена" />
+        <Label fx:id="messageLabel" minHeight="30" styleClass="messageLabel"/>
+        <HBox spacing="5" alignment="BASELINE_RIGHT" >
+            <Button fx:id="saveButton" text="Сохранить" onAction="#saveProperties" />
+            <Button text="Отмена"  onAction="#cancel" />
         </HBox>
+
       <padding>
          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
       </padding>
