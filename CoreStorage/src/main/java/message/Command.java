@@ -7,5 +7,7 @@ import java.io.Serializable;
 
 public class Command implements Serializable {
     @Getter@Setter
-    CommandType type;
+    CommandType commandType;
+    @Getter@Setter
+    MessageType messageType;
 }

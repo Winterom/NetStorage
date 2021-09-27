@@ -13,7 +13,7 @@ public class FileMessage extends Command{
     private final byte[] buffer;
 
     public FileMessage(FileInfo fileInfo) throws IOException {
-        super.setType(CommandType.FILE_MESSAGE);
+        super.setCommandType(CommandType.FILE_MESSAGE);
         this.fileInfo = fileInfo;
         this.buffer = Files.readAllBytes(Path.of(fileInfo.getFullPath()));
     }

@@ -7,6 +7,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import message.Authentication;
 import message.Command;
 import message.CommandType;
+import message.MessageType;
 
 import java.nio.file.Path;
 
@@ -20,7 +21,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Command> 
     }
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Command command) throws Exception {
-        if (command.getType() == CommandType.AUTH){
+        if (command.getCommandType() == CommandType.AUTH & command.getMessageType()==MessageType.REQUEST){
             Authentication authentication = (Authentication) command;
             EntityUser user = new EntityUser(authentication.getLogin(), authentication.getHashPassword());
             if (user.isAuthentication()){

@@ -1,5 +1,6 @@
 package appServer;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,6 +25,12 @@ public class EntityUser {
 
         this.login = login;
         this.hashPassword = hashPassword;
-        isAuthentication =true;
+        isAuthentication = checkPassword();
     }
+
+    private boolean checkPassword() {
+        return true;
+    }
+
+
 }

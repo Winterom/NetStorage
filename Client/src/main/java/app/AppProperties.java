@@ -28,7 +28,7 @@ public class AppProperties {
     @Getter@Setter
     private String password="";
 
-    Properties prop;
+    private final Properties prop;
 
 
     public static AppProperties getInstance(){

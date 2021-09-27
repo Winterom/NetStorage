@@ -11,7 +11,7 @@
     <modules>
         <module>Client</module>
         <module>Server</module>
-        <module>core</module>
+        <module>CoreStorage</module>
         <module>CoreStorage</module>
     </modules>
 

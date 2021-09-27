@@ -17,7 +17,13 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 
 import java.io.IOException;
@@ -32,7 +38,12 @@ public class AppServer {
 
 
     public void start(int portForClient, int portForTelnet){
+        setPropertiesLog4j();
+        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);//заменяем log4j на slf4j
+
+
         Path pathToRootDir = Paths.get((System.getProperty("user.dir")), ROOT_DIR_NAME);
+
         if(!Files.exists(pathToRootDir)){
             try {
                 Files.createDirectory(pathToRootDir);
@@ -92,5 +103,14 @@ public class AppServer {
 
         }
 
+    }
+
+    private void setPropertiesLog4j() {
+        ConsoleAppender console = new ConsoleAppender();
+        String PATTERN = "%d [%p|%c|%C{1}] %m%n";
+        console.setLayout(new PatternLayout(PATTERN));
+        console.setThreshold(Level.ALL);
+        console.activateOptions();
+        Logger.getRootLogger().addAppender(console);
     }
 }
