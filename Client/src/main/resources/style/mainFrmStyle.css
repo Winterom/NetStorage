@@ -30,3 +30,11 @@
 .messageLabel {
     -fx-text-fill: red;
 }
+
+.synchronizedButton {
+    -fx-background-image: url("../image/arrow-repeat.png");
+}
+
+.returnButton {
+    -fx-background-image: url("../image/arrow-left.png");
+}

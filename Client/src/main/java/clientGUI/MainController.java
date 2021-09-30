@@ -1,7 +1,9 @@
 package clientGUI;
 
-import app.AppProperties;
+import app.ClientProperties;
 import app.ClientNet;
+import app.NetCallback;
+import app.SynchronizeFileList;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -19,7 +21,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import message.Command;
 import message.FileInfo;
+import message.FileListRequest;
+import message.FileListResponse;
 
 import java.io.IOException;
 import java.net.URL;
@@ -43,20 +48,31 @@ public class MainController implements Initializable {
     @FXML
     private TextField pathField;
 
-    private Path filePathOnClipboard;
+
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        if (AppProperties.getInstance().getRootDir().isEmpty()||
-                AppProperties.getInstance().getLogin().isEmpty()||
-                AppProperties.getInstance().getPassword().isEmpty()){
+        ClientNet.getInstance(new NetCallback() {
+            @Override
+            public void call(Command command) {
+                switch (command.getCommandType()){
+                    case  LIST_FILE_RESPONSE:
+                        FileListResponse listResponse = (FileListResponse)command;
+                        SynchronizeFileList synchronizeFileList = new SynchronizeFileList(listResponse.getFileList());
+                        synchronizeFileList.start();
+                    break;
+
+                }
+
+            }
+        });
+        if (ClientProperties.getInstance().getRootDir().isEmpty()||
+                ClientProperties.getInstance().getLogin().isEmpty()||
+                ClientProperties.getInstance().getPassword().isEmpty()){
             openPropertiesStage(null);
         }
 
-        ClientNet clientNet = new ClientNet();
-        Thread thread = new Thread(clientNet);
-        thread.setDaemon(true);
-        thread.start();
+
 
         insertButton.setDisable(true);//Сначало надо что то скопировать в буфер
 
@@ -138,14 +154,12 @@ public class MainController implements Initializable {
                             getSelectionModel().getSelectedItem().getFileName());
                     if (Files.isDirectory(path)) {
                         updateFileList(path);
-                    }else {
-                        clientNet.sendFileToServer(fileInfoTableView.getSelectionModel().getSelectedItem());
                     }
                 }
             }
         });
 
-        updateFileList(Paths.get(AppProperties.getInstance().getRootDir()));
+        updateFileList(Paths.get(ClientProperties.getInstance().getRootDir()));
     }
 
 
@@ -168,7 +182,7 @@ public class MainController implements Initializable {
         Path oldPath = Paths.get(pathField.getText());
         Path parentPath = Paths.get(pathField.getText()).getParent();
         if (oldPath.relativize(parentPath).toString().equals("..")){
-            updateFileList(Path.of(AppProperties.getInstance().getRootDir()));
+            updateFileList(Path.of(ClientProperties.getInstance().getRootDir()));
             return;
         }
         updateFileList(parentPath);
@@ -188,41 +202,11 @@ public class MainController implements Initializable {
     }
 
     public void copyPathToClipboard(ActionEvent actionEvent) {
-        //когда ничего не выбрано получаем NullPointerException
-        if (this.fileInfoTableView.getSelectionModel().getSelectedItem() == null) {
-            Alert alertNothing = new Alert(Alert.AlertType.WARNING, "Файл не выбран!", ButtonType.OK);
-            alertNothing.showAndWait();
-            insertButton.setDisable(true);
-            return;
-        }
-        this.filePathOnClipboard = Paths.get(pathField.getText()).resolve(fileInfoTableView.getSelectionModel().getSelectedItem().getFileName());
-        if (!Files.exists(this.filePathOnClipboard)) {
-            this.filePathOnClipboard = null;
-            insertButton.setDisable(true);
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Выбранного пути не существует!", ButtonType.OK);
-            alert.setTitle("Ошибка!");
-            alert.showAndWait();
-            return;
-        }
-        insertButton.setDisable(false);
-        messageLabel.setText("В буфере обмене ссылка на: " + filePathOnClipboard.toString());
+
     }
 
     public void insertFile(ActionEvent actionEvent) {
-        if (filePathOnClipboard == null) {
-            return;
-        }
-        try {
-            Files.copy(filePathOnClipboard, Paths.get(pathField.getText() + filePathOnClipboard.getFileName()));
-            messageLabel.setText("Копирование успешно завершено!");
-            updateFileList(Paths.get(pathField.getText()));
-        } catch (IOException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Не удалось скопировать файл "
-                    + filePathOnClipboard.getFileName() + "!", ButtonType.OK);
-            alert.setTitle("Ошибка!");
-            alert.showAndWait();
-            e.printStackTrace();
-        }
+
     }
 
     public void deleteFile(ActionEvent actionEvent) {
@@ -247,5 +231,15 @@ public class MainController implements Initializable {
             }
         }
 
+    }
+
+    public void synchronizedFile(ActionEvent actionEvent) {
+        FileListRequest request = new FileListRequest();
+        ClientNet.getInstance().sendRequest(request);
+
+    }
+
+
+    public void returnAction(ActionEvent actionEvent) {
     }
 }

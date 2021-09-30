@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/Server/src/main/resources/db/v1/01-create-users-table.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/Server/src/main/resources/db/v1/01-drop-users-table.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/Server/src/main/resources/db/v1/10-create-files-table.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/Server/src/main/resources/db/v1/10-drop-file-table.sql" dialect="MySQL" />
+  </component>
+</project>

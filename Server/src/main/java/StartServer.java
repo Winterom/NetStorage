@@ -7,6 +7,10 @@ public class StartServer {
 
     public static void main(String[] args) {
         AppServer srv = new AppServer();
+        if(!srv.init()){
+            System.out.println("Продолжение запуска сервера невозможно");
+            return;
+        }
         srv.start(StartServer.PORT_FOR_CLIENT,PORT_FOR_TELNET);
     }
 }

@@ -1,6 +1,6 @@
 package clientGUI;
 
-import app.AppProperties;
+import app.ClientProperties;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -41,10 +41,10 @@ public class PropertiesFrmController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        rootDir.setText(AppProperties.getInstance().getRootDir());
-        sendError.setSelected(AppProperties.getInstance().isSendStacktraceToServer());
-        password.setText(AppProperties.getInstance().getPassword());
-        login.setText(AppProperties.getInstance().getLogin());
+        rootDir.setText(ClientProperties.getInstance().getRootDir());
+        sendError.setSelected(ClientProperties.getInstance().isSendStacktraceToServer());
+        password.setText(ClientProperties.getInstance().getPassword());
+        login.setText(ClientProperties.getInstance().getLogin());
     }
 
     public void changeDirectory(ActionEvent actionEvent) {
@@ -63,25 +63,25 @@ public class PropertiesFrmController implements Initializable {
                 log.error("stacktrace ",e);
             }
         }
-        if (AppProperties.validateDirectory(dir)){
-            AppProperties.getInstance().setRootDir(rootDir.getText());
+        if (ClientProperties.validateDirectory(dir)){
+            ClientProperties.getInstance().setRootDir(rootDir.getText());
         }else {
             messageLabel.setText("Директория не существует или она не пустая");
             return;
         }
-        if (AppProperties.validateLogin(login.getText())){
-            AppProperties.getInstance().setLogin(login.getText());
+        if (ClientProperties.validateLogin(login.getText())){
+            ClientProperties.getInstance().setLogin(login.getText());
         }else {
             messageLabel.setText("Длина логина не удовлетворяет требованиям");
             return;
         }
-        if (AppProperties.validationPassword(password.getText())){
-            AppProperties.getInstance().setPassword(password.getText());
+        if (ClientProperties.validationPassword(password.getText())){
+            ClientProperties.getInstance().setPassword(password.getText());
         }else {
             messageLabel.setText("Длина пароля не удовлетворяет требованиям");
             return;
         }
-        AppProperties.getInstance().savePropertiesFile();
+        ClientProperties.getInstance().savePropertiesFile();
     }
 
     public void cancel(ActionEvent actionEvent) {
