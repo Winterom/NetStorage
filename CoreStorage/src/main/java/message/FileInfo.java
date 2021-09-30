@@ -11,6 +11,8 @@ import java.time.ZoneId;
 
 @Slf4j
 public class FileInfo implements Serializable {
+
+
     //Основная цель по расширению подставлять соответствующие значки в таблицу
     public enum FileType { FILE("F"), DIRECTORY ("D"),WORD("W"),
         EXCEl("E"),PDF("PDF"),BMP("BMP"),JPEG("JPEG"),
@@ -27,24 +29,18 @@ public class FileInfo implements Serializable {
     }
 
     @lombok.Setter @lombok.Getter
-    private String fileName;
+    private FileType fileType;//излишек наверное тоже надо убрать
     @lombok.Setter @lombok.Getter
-    private FileType fileType;
+    private long size; //храним в базе  данных
     @lombok.Setter @lombok.Getter
-    private long size;
-    @lombok.Setter @lombok.Getter
-    private LocalDateTime lastModified;
+    private LocalDateTime lastModified; //храним в базе  данных
     @lombok.Setter @lombok.Getter
     private boolean fileSynchronized;
     @lombok.Setter @lombok.Getter
-    private String fullPath;
-    @lombok.Setter @lombok.Getter
-    private String relativizePath =null;//относительный путь необходим для построения системы каталогов на сервере
+    private String relativizePath;//храним в базе  данных
 
-
+    //При создании на клиенте не забывать заполнять relativizePath
     public FileInfo(Path fullPath) {
-        this.fullPath = fullPath.toString();
-        this.fileName = fullPath.getFileName().toString();
         try {
             this.size = Files.size(fullPath);
             this.fileType = Files.isDirectory(fullPath)?FileType.DIRECTORY:FileType.FILE;
@@ -55,5 +51,8 @@ public class FileInfo implements Serializable {
         } catch (IOException e) {
             log.error("Stacktrace ",e);
         }
+    }
+    public String getFileName() {
+        return Path.of(relativizePath).getFileName().toString();
     }
 }

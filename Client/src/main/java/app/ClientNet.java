@@ -1,84 +1,74 @@
 package app;
 
 
-import at.favre.lib.crypto.bcrypt.BCrypt;
-import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
-import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
+import app.handlers.AuthenticationHandler;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.*;
 import lombok.extern.slf4j.Slf4j;
 import message.*;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.nio.file.Path;
-
 
 @Slf4j
-public class ClientNet implements Runnable {
+public class ClientNet {
 
-    ObjectEncoderOutputStream os;
-    ObjectDecoderInputStream is;
-    Socket socket;
+    private static volatile ClientNet instance;
+
+    private SocketChannel channelNet;
+
+    private final NetCallback netCallback;
+
     boolean isAuth = false;
-    @Override
-    public void run() {
-        try {
-            socket = new Socket(AppProperties.getHOST(),AppProperties.getPORT());
-            os = new ObjectEncoderOutputStream(socket.getOutputStream());
-            is = new ObjectDecoderInputStream(socket.getInputStream());
-            //вывести сообщение об успешном соединении с сервером
-            Authentication authentication = new Authentication();
-            authentication.setCommandType(CommandType.AUTH);
-            authentication.setMessageType(MessageType.REQUEST);
-            authentication.setLogin(AppProperties.getInstance().getLogin());
-            String bcryptHashPassword = BCrypt.withDefaults().hashToString(12,
-                    AppProperties.getInstance().getPassword().toCharArray());
-            authentication.setHashPassword(bcryptHashPassword);
-            System.out.println(bcryptHashPassword);
-            os.writeObject(authentication);
-            os.flush();
-            Authentication response = (Authentication) is.readObject();
-            if (response.getResponseCode().equals("200")){
-                isAuth = true;
-                //вывести сообщение об успешной аутентификации
+
+    public static ClientNet getInstance(NetCallback netCallback){
+        if (instance == null){
+            synchronized (ClientNet.class){
+                if (instance == null){
+                    instance = new ClientNet(netCallback);
+                }
             }
-
-        } catch (IOException | ClassNotFoundException e) {
-            log.error("stacktrace ", e);
-        } finally {
-            closeStream();
         }
-
+        return instance;
     }
 
-    public void sendFileToServer(FileInfo fileInfo) {
-        try {
-            //Перекидка из Path в String и обратно нужна потому что объект Path не сериализуемый
-            //
-            if (!isAuth){
-                return;
+    public ClientNet(NetCallback netCallback) {
+        this.netCallback = netCallback;
+        Thread thread = new Thread(() -> {
+            EventLoopGroup workerGroup = new NioEventLoopGroup();
+            try {
+                Bootstrap bootstrap = new Bootstrap();
+                bootstrap.
+                        group(workerGroup).
+                        channel(NioSocketChannel.class).
+                        handler(new ChannelInitializer<SocketChannel>() {
+                            @Override
+                            public void initChannel(SocketChannel ch) {
+                                channelNet = ch;
+                                channelNet.pipeline().addLast(
+                                        new ObjectEncoder(),
+                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                        new AuthenticationHandler(isAuth, netCallback)
+                                );
+                            }
+                        });
+                ChannelFuture f = bootstrap.connect(ClientProperties.getHOST(), ClientProperties.getPORT()).sync();
+                f.channel().closeFuture().sync();
+            }catch (InterruptedException e){
+                log.error(e.getMessage());
+            }finally {
+                workerGroup.shutdownGracefully();
             }
-            Path tempPath = Path.of(AppProperties.getInstance().getRootDir());
-            fileInfo.setRelativizePath(tempPath.relativize(Path.of(fileInfo.getFullPath())).toString());
-            os.writeObject(new FileMessage(fileInfo));
-            os.flush();
-        } catch (IOException e) {
-            log.error(e.toString());
-        }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
-    public void closeStream() {
-        try {
-            if (os !=null){
-                os.close();
-            }
-            if (is !=null){
-                is.close();
-            }
-            if (socket !=null){
-                socket.close();
-            }
-        } catch (IOException e) {
-            log.error(e.toString());
-        }
+    public void sendRequest(Command command) {
+        channelNet.writeAndFlush(command);
     }
 }

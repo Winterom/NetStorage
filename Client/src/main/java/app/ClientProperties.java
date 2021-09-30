@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 @Slf4j
-public class AppProperties {
+public class ClientProperties {
     private static final int MIN_LOGIN_LENGTH =4;
     private static final int MIN_PASSWORD_LENGTH =6;
     @Getter
@@ -18,7 +18,7 @@ public class AppProperties {
     @Getter
     private static final String HOST = "localhost";
 
-    private static volatile AppProperties instance;
+    private static volatile ClientProperties instance;
     @Getter@Setter
     private String rootDir="";
     @Getter@Setter
@@ -31,11 +31,11 @@ public class AppProperties {
     private final Properties prop;
 
 
-    public static AppProperties getInstance(){
+    public static ClientProperties getInstance(){
         if (instance == null){
-            synchronized (AppProperties.class){
+            synchronized (ClientProperties.class){
                 if (instance == null){
-                    instance = new AppProperties();
+                    instance = new ClientProperties();
                 }
             }
         }
@@ -45,7 +45,7 @@ public class AppProperties {
 
     //наверное не очень хорошо вызывать в конструкторе
     //методы которые могут кинуть исключение
-    private AppProperties() {
+    private ClientProperties() {
         this.prop = new Properties();
             if (!Files.exists(Path.of("config.properties"))) {
                 savePropertiesFile();
@@ -64,7 +64,7 @@ public class AppProperties {
     }
 
     public void savePropertiesFile(){
-        try (OutputStream fos = Files.newOutputStream(Path.of("config.properties"));){
+        try (OutputStream fos = Files.newOutputStream(Path.of("config.properties"))){
             prop.setProperty("rootDir", rootDir);
             prop.setProperty("login", login);
             prop.setProperty("password", password);

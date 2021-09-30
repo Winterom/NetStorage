@@ -5,6 +5,8 @@ import appServer.handlersForClientSrv.AuthenticationHandler;
 import appServer.handlersForClientSrv.SocketAccounting;
 import appServer.handlersForMonitoringSrv.CommandMonitoringProcessingHandler;
 import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
+import appServer.serviceApp.DBConnection;
+import appServer.serviceApp.SrvProperties;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -19,38 +21,61 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
+import liquibase.Contexts;
+import liquibase.LabelExpression;
+import liquibase.Liquibase;
+import liquibase.database.Database;
+import liquibase.database.DatabaseFactory;
+import liquibase.database.jvm.JdbcConnection;
+import liquibase.exception.LiquibaseException;
+import liquibase.resource.ClassLoaderResourceAccessor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
+import org.apache.log4j.*;
+
 
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 @Slf4j
 public class AppServer {
 
     private final static String ROOT_DIR_NAME = "Storage";
+    Path pathToRootDir;
 
 
-    public void start(int portForClient, int portForTelnet){
-        setPropertiesLog4j();
-        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);//заменяем log4j на slf4j
 
-
-        Path pathToRootDir = Paths.get((System.getProperty("user.dir")), ROOT_DIR_NAME);
-
+    //возвращаем false если что то настроить не удалось.
+    public boolean init(){
+        this.pathToRootDir = Paths.get((System.getProperty("user.dir")), ROOT_DIR_NAME);
         if(!Files.exists(pathToRootDir)){
             try {
                 Files.createDirectory(pathToRootDir);
             } catch (IOException e) {
                 log.error(e.getMessage());
+                return false;
             }
         }
+
+        if (!SrvProperties.getInstance().isGood()){
+            return false;
+        }
+        //Запускаем liquibase
+        runliquibase();
+        //работаем с log4j через slf4j
+        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
+        //устанавливаем настройки log4j
+        setPropertiesLog4j();
+
+        return true;
+    }
+
+    public void start(int portForClient, int portForTelnet){
+        //Сбор статистической информации
         ServiceForMonitoring service = new ServiceForMonitoring();
 
         EventLoopGroup auth = new NioEventLoopGroup(1);
@@ -65,17 +90,18 @@ public class AppServer {
                 @Override
                 protected void initChannel(SocketChannel socketChannel) throws Exception {
                     socketChannel.pipeline().addLast(
-                            new SocketAccounting(service),
+                            new SocketAccounting(service),//сбор текущей статистики
                             new ObjectEncoder(),
                             new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                            new AuthenticationHandler(pathToRootDir,service)
+                            new AuthenticationHandler(service)//пока кроме auth никаких хендлеров не будет
                     );
                 }
             }).bind(portForClient).sync();
 
             log.debug("Server for client starting on : "+portForClient);
+
             //Создаем второй сервер для мониторинга
-            //Надо ли повторно создавать EventLoopGroup или можно использовать старые
+            //к нему можно подключиться и по telnet
 
             ServerBootstrap bootstrapMonitoring = new ServerBootstrap();
             ChannelFuture channelFutureMonitoring = bootstrapMonitoring.group(auth2, worker2).
@@ -90,6 +116,7 @@ public class AppServer {
                 }
             }).bind(portForTelnet).sync();
             log.debug("Server for monitoring starting on : "+portForTelnet);
+            //здесь текущий поток в ожидании завершения
             channelFuture.channel().closeFuture().sync();
             channelFutureMonitoring.channel().closeFuture().sync();
         }catch (InterruptedException e){
@@ -112,5 +139,26 @@ public class AppServer {
         console.setThreshold(Level.ALL);
         console.activateOptions();
         Logger.getRootLogger().addAppender(console);
+
+    }
+
+    private void runliquibase() {
+        Connection c = DBConnection.getInstance().getConnection();
+        try {
+            Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(c));
+            Liquibase liquibase = new Liquibase("db/dbchangelog-master.xml", new ClassLoaderResourceAccessor(), database);
+            liquibase.update(new Contexts(), new LabelExpression());
+        } catch (LiquibaseException e) {
+            e.printStackTrace();
+        } finally {
+            if (c != null) {
+                try {
+                    c.rollback();
+                    c.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

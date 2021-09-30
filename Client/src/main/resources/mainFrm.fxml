@@ -33,9 +33,19 @@
                 <Tooltip text="Удалить" />
             </tooltip>
         </Button>
+        <Button focusTraversable="false" styleClass="synchronizedButton" onAction="#synchronizedFile">
+            <tooltip>
+                <Tooltip text="Синхронизировать с сервером" />
+            </tooltip>
+        </Button>
     </ToolBar>
 
     <HBox spacing="5">
+        <Button focusTraversable="false" styleClass="returnButton" onAction="#returnAction">
+            <tooltip>
+                <Tooltip text="Синхронизировать с сервером" />
+            </tooltip>
+        </Button>
         <TextField fx:id="pathField" editable="false" focusTraversable="false" minHeight="35" HBox.hgrow="ALWAYS">
         </TextField>
         <Button focusTraversable="false" styleClass="upButton" onAction="#btnUpPathAction"/>

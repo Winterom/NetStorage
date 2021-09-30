@@ -1,7 +1,9 @@
 package message;
 
 public enum CommandType {
-    AUTH,
+    AUTH_REQUEST,
+    AUTH_RESPONSE,
     FILE_MESSAGE,
-    LIST_FILE
+    LIST_FILE_REQUEST,
+    LIST_FILE_RESPONSE
 }

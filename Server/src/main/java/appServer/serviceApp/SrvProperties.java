@@ -1,4 +1,6 @@
-package appServer;
+package appServer.serviceApp;
+
+import lombok.Getter;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,13 +13,22 @@ import java.util.Properties;
 public class SrvProperties {
 
     private static volatile SrvProperties instance;
+
     private final Properties prop;
+    @Getter
     private String driver   = "com.mysql.jdbc.Driver";
+    @Getter
     private String url      = "jdbc:mysql://localhost:";
-    private String portDb   = "3306/";
+    @Getter
+    private String portDb;
+    @Getter
     private String dbName;
+    @Getter
     private String userName;
+    @Getter
     private String password;
+    @Getter
+    private boolean isGood;
 
     public static SrvProperties getInstance(){
         if (instance == null){
@@ -31,11 +42,13 @@ public class SrvProperties {
     }
 
     private SrvProperties() {
+
+        this.isGood =true;
         this.prop = new Properties();
-        if (!Files.exists(Path.of("config.properties"))) {
-            savePropertiesFile();
+        if (!Files.exists(Path.of("srv.properties"))) {
+            saveDefaultPropertiesFile();
         }
-        try (InputStream input = new FileInputStream("config.properties")) {
+        try (InputStream input = new FileInputStream("srv.properties")) {
 
             prop.load(input);
             portDb = prop.getProperty("portDb");
@@ -44,18 +57,20 @@ public class SrvProperties {
             dbName = prop.getProperty("dbName");
 
         }catch (IOException e){
+            this.isGood =false;
             e.printStackTrace();
         }
     }
 
-    private void savePropertiesFile() {
-        try (OutputStream fos = Files.newOutputStream(Path.of("config.properties"));){
-            prop.setProperty("portDb", portDb);
-            prop.setProperty("dbName", dbName);
-            prop.setProperty("userName", userName);
-            prop.setProperty("password", password);
-
+    private void saveDefaultPropertiesFile() {
+        try (OutputStream fos = Files.newOutputStream(Path.of("srv.properties"));){
+            prop.setProperty("portDb", "3306");
+            prop.setProperty("dbName", "storage");
+            prop.setProperty("userName", "winterom");
+            prop.setProperty("password","London8793");
+            prop.store(fos,null);
         }catch (IOException e) {
+            this.isGood =false;
             e.printStackTrace();
         }
     }
