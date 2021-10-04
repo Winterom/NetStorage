@@ -1,36 +1,58 @@
 package appServer.handlersForClientSrv;
 
 import appServer.serviceApp.EntityUser;
-import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
+import appServer.serviceApp.SrvProperties;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 import message.Command;
+import message.FileMessage;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 
-import java.time.LocalDateTime;
+import java.nio.file.*;
 
+@Slf4j
 public class MessageHandler extends SimpleChannelInboundHandler<Command> {
    EntityUser user;
-   ServiceForMonitoring service;
-    public MessageHandler(EntityUser user, ServiceForMonitoring service){
+    public MessageHandler(EntityUser user){
         this.user = user;
-        this.service = service;
+        System.out.println("ура создали хэндлер");
     }
-    @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, Command command) throws Exception {
-        switch (command.getCommandType()) {
-            case LIST_FILE_REQUEST:
+
+
+    private void fileMessageFromClient(FileMessage fileMessage){
+        String  fileName = Paths.get(fileMessage.getRelativizePath()).getFileName().toString();
+        String tempFileName = fileName.replaceAll("\\.", "")+".temporary";
+        System.out.println("получили сообщение");
+        Path tempFilePath = SrvProperties.getInstance().getPathToRootDir().resolve(Path.of(tempFileName));
+        if(fileMessage.isFinal()){
+            try {
+                Files.move(tempFilePath,tempFilePath.resolveSibling(fileName), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                log.error(e.getMessage());
+            }
+            return;
         }
-
+        try(FileChannel fileChannel = FileChannel.open(tempFilePath, StandardOpenOption.APPEND)) {
+            fileChannel.write(fileMessage.getBuffer());
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
     }
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        //super.channelActive(ctx);
-        service.getUsers().put(user, LocalDateTime.now());
 
-    }
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        //super.channelInactive(ctx);
-        service.getUsers().remove(user);
+    protected void channelRead0(ChannelHandlerContext ctx, Command command) throws Exception {
+        System.out.println("ура пришло сообщение");
+        switch (command.getCommandType()) {
+            case LIST_FILE_REQUEST:break;
+            case FILE_MESSAGE:
+                System.out.println("message handler создан и пришло сообщение");
+                FileMessage fileMessage = (FileMessage) command;
+                fileMessageFromClient(fileMessage);
+                break;
+            default:
+                System.out.println(command.getCommandType());break;
+        }
     }
 }

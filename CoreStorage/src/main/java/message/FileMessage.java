@@ -2,19 +2,24 @@ package message;
 
 
 import lombok.Getter;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import lombok.Setter;
+import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 
 public class FileMessage extends Command{
-    public FileInfo fileInfo;
+    @lombok.Setter @lombok.Getter
+    private long size; //храним в базе  данных
+    @lombok.Setter @lombok.Getter
+    private LocalDateTime lastModified; //храним в базе  данных
+    @lombok.Setter @lombok.Getter
+    private String relativizePath;//храним в базе  данных
+    @Getter@Setter
+    private boolean isFinal = false;
     @Getter
-    private final byte[] buffer;
+    private final ByteBuffer buffer;
 
-    public FileMessage(FileInfo fileInfo) throws IOException {
+    public FileMessage(int bufferSize){
         super.setCommandType(CommandType.FILE_MESSAGE);
-        this.fileInfo = fileInfo;
-        this.buffer = Files.readAllBytes(Path.of(fileInfo.getFullPath()));
+        buffer  = ByteBuffer.allocate(bufferSize);
     }
 }

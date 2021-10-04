@@ -29,18 +29,21 @@ public class FileInfo implements Serializable {
     }
 
     @lombok.Setter @lombok.Getter
-    private FileType fileType;//излишек наверное тоже надо убрать
+    private FileType fileType;
     @lombok.Setter @lombok.Getter
-    private long size; //храним в базе  данных
+    private long size;
     @lombok.Setter @lombok.Getter
-    private LocalDateTime lastModified; //храним в базе  данных
+    private LocalDateTime lastModified;
     @lombok.Setter @lombok.Getter
     private boolean fileSynchronized;
     @lombok.Setter @lombok.Getter
-    private String relativizePath;//храним в базе  данных
+    private String relativizePath;
+    @lombok.Setter @lombok.Getter
+    private String fullPath;
 
-    //При создании на клиенте не забывать заполнять relativizePath
+
     public FileInfo(Path fullPath) {
+        this.fullPath = fullPath.toString();
         try {
             this.size = Files.size(fullPath);
             this.fileType = Files.isDirectory(fullPath)?FileType.DIRECTORY:FileType.FILE;
@@ -49,10 +52,10 @@ public class FileInfo implements Serializable {
             this.lastModified = LocalDateTime.ofInstant(Files.getLastModifiedTime(fullPath).toInstant(), ZoneId.systemDefault());
 
         } catch (IOException e) {
-            log.error("Stacktrace ",e);
+            log.error(e.getMessage());
         }
     }
     public String getFileName() {
-        return Path.of(relativizePath).getFileName().toString();
+        return Path.of(fullPath).getFileName().toString();
     }
 }

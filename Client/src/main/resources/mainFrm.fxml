@@ -33,7 +33,7 @@
                 <Tooltip text="Удалить" />
             </tooltip>
         </Button>
-        <Button focusTraversable="false" styleClass="synchronizedButton" onAction="#synchronizedFile">
+        <Button fx:id="synchButton" focusTraversable="false" styleClass="synchronizedButton" onAction="#synchronizedFile">
             <tooltip>
                 <Tooltip text="Синхронизировать с сервером" />
             </tooltip>

@@ -10,34 +10,17 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.serialization.*;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import message.*;
 
 
 @Slf4j
 public class ClientNet {
+    @Getter
+    private SocketChannel channel;
 
-    private static volatile ClientNet instance;
-
-    private SocketChannel channelNet;
-
-    private final NetCallback netCallback;
-
-    boolean isAuth = false;
-
-    public static ClientNet getInstance(NetCallback netCallback){
-        if (instance == null){
-            synchronized (ClientNet.class){
-                if (instance == null){
-                    instance = new ClientNet(netCallback);
-                }
-            }
-        }
-        return instance;
-    }
-
-    public ClientNet(NetCallback netCallback) {
-        this.netCallback = netCallback;
+    public ClientNet() {
         Thread thread = new Thread(() -> {
             EventLoopGroup workerGroup = new NioEventLoopGroup();
             try {
@@ -48,11 +31,11 @@ public class ClientNet {
                         handler(new ChannelInitializer<SocketChannel>() {
                             @Override
                             public void initChannel(SocketChannel ch) {
-                                channelNet = ch;
-                                channelNet.pipeline().addLast(
-                                        new ObjectEncoder(),
+                                channel = ch;
+                                ch.pipeline().addLast(
                                         new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                                        new AuthenticationHandler(isAuth, netCallback)
+                                        new ObjectEncoder(),
+                                        new AuthenticationHandler()
                                 );
                             }
                         });
@@ -68,7 +51,10 @@ public class ClientNet {
         thread.start();
     }
 
-    public void sendRequest(Command command) {
-        channelNet.writeAndFlush(command);
+    public void sendMessage(Command command) {
+        System.out.println(command);
+        this.channel.writeAndFlush(command);
     }
+
+
 }

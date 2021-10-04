@@ -1,9 +1,8 @@
 package appServer;
 
 
-import appServer.handlersForClientSrv.AuthenticationHandler;
+import appServer.handlersForClientSrv.AuthenticationHandlerSrv;
 import appServer.handlersForClientSrv.SocketAccounting;
-import appServer.handlersForMonitoringSrv.CommandMonitoringProcessingHandler;
 import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
 import appServer.serviceApp.DBConnection;
 import appServer.serviceApp.SrvProperties;
@@ -17,8 +16,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import liquibase.Contexts;
@@ -34,33 +31,15 @@ import org.apache.log4j.*;
 
 
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 @Slf4j
 public class AppServer {
 
-    private final static String ROOT_DIR_NAME = "Storage";
-    Path pathToRootDir;
-
-
 
     //возвращаем false если что то настроить не удалось.
     public boolean init(){
-        this.pathToRootDir = Paths.get((System.getProperty("user.dir")), ROOT_DIR_NAME);
-        if(!Files.exists(pathToRootDir)){
-            try {
-                Files.createDirectory(pathToRootDir);
-            } catch (IOException e) {
-                log.error(e.getMessage());
-                return false;
-            }
-        }
-
         if (!SrvProperties.getInstance().isGood()){
             return false;
         }
@@ -75,59 +54,38 @@ public class AppServer {
     }
 
     public void start(int portForClient, int portForTelnet){
-        //Сбор статистической информации
+
+        EventLoopGroup auth = new NioEventLoopGroup();
+        EventLoopGroup worker = new NioEventLoopGroup();
         ServiceForMonitoring service = new ServiceForMonitoring();
 
-        EventLoopGroup auth = new NioEventLoopGroup(1);
-        EventLoopGroup worker = new NioEventLoopGroup();
-
-        EventLoopGroup auth2 = new NioEventLoopGroup(1);
-        EventLoopGroup worker2 = new NioEventLoopGroup(1);
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
             ChannelFuture channelFuture = bootstrap.group(auth, worker).
                     channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 protected void initChannel(SocketChannel socketChannel) throws Exception {
+
                     socketChannel.pipeline().addLast(
-                            new SocketAccounting(service),//сбор текущей статистики
-                            new ObjectEncoder(),
                             new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                            new AuthenticationHandler(service)//пока кроме auth никаких хендлеров не будет
+                            new ObjectEncoder(),
+                            new AuthenticationHandlerSrv()//пока кроме auth никаких хендлеров не будет
+
                     );
                 }
             }).bind(portForClient).sync();
 
             log.debug("Server for client starting on : "+portForClient);
 
-            //Создаем второй сервер для мониторинга
-            //к нему можно подключиться и по telnet
-
-            ServerBootstrap bootstrapMonitoring = new ServerBootstrap();
-            ChannelFuture channelFutureMonitoring = bootstrapMonitoring.group(auth2, worker2).
-                    channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                protected void initChannel(SocketChannel socketChannel) throws Exception {
-                    socketChannel.pipeline().addLast(
-                            new StringDecoder(),
-                            new StringEncoder(),
-                            new CommandMonitoringProcessingHandler(service)
-                    );
-                }
-            }).bind(portForTelnet).sync();
-            log.debug("Server for monitoring starting on : "+portForTelnet);
             //здесь текущий поток в ожидании завершения
             channelFuture.channel().closeFuture().sync();
-            channelFutureMonitoring.channel().closeFuture().sync();
+
         }catch (InterruptedException e){
-            log.error("stacktrace ",e);
+            log.error(e.getMessage());
         }
         finally {
             auth.shutdownGracefully();
             worker.shutdownGracefully();
-            auth2.shutdownGracefully();
-            worker2.shutdownGracefully();
-
         }
 
     }

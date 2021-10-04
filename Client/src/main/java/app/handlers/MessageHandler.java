@@ -1,20 +1,18 @@
 package app.handlers;
 
-
-import app.NetCallback;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+
+import lombok.extern.slf4j.Slf4j;
 import message.Command;
 
-public class MessageHandler extends SimpleChannelInboundHandler<Command> {
-    private final NetCallback netCallback;
 
-    public MessageHandler(NetCallback netCallback) {
-        this.netCallback = netCallback;
-    }
+@Slf4j
+public class MessageHandler extends SimpleChannelInboundHandler<Command> {
+
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Command command) throws Exception {
-        netCallback.call(command);
+    protected void channelRead0(ChannelHandlerContext ctx, Command msg) throws Exception {
+        System.out.println(msg);
     }
 }

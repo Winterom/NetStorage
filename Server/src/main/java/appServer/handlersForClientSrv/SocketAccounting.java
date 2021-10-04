@@ -20,4 +20,10 @@ public class SocketAccounting extends ChannelInboundHandlerAdapter {
         super.channelInactive(ctx);
         service.getCountConnection().decrementAndGet();
     }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        System.out.println(msg);
+        super.channelRead(ctx, msg);
+    }
 }
