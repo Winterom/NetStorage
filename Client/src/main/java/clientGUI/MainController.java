@@ -1,9 +1,7 @@
 package clientGUI;
 
-import app.ClientProperties;
 import app.ClientNet;
-import app.NetCallback;
-import app.SynchronizeFileList;
+import app.ClientProperties;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -21,22 +19,39 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import message.Command;
-import message.FileInfo;
-import message.FileListRequest;
-import message.FileListResponse;
+import lombok.extern.slf4j.Slf4j;
+import message.*;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class MainController implements Initializable {
+    //Мы конечно заблокируем кнопку синхронизировать до конца синхронизации
+    //с сервером но на всякий случай монитором будет объект. что бы одновременно
+    // не началось две и более синхронизации
+    public final Object lock = new Object();
+    private ClientNet clientNet;
+    @FXML
+    public Button synchButton;
     @FXML
     private Label messageLabel;
     @FXML
@@ -52,32 +67,20 @@ public class MainController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        ClientNet.getInstance(new NetCallback() {
-            @Override
-            public void call(Command command) {
-                switch (command.getCommandType()){
-                    case  LIST_FILE_RESPONSE:
-                        FileListResponse listResponse = (FileListResponse)command;
-                        SynchronizeFileList synchronizeFileList = new SynchronizeFileList(listResponse.getFileList());
-                        synchronizeFileList.start();
-                    break;
-
-                }
-
-            }
-        });
         if (ClientProperties.getInstance().getRootDir().isEmpty()||
                 ClientProperties.getInstance().getLogin().isEmpty()||
                 ClientProperties.getInstance().getPassword().isEmpty()){
             openPropertiesStage(null);
         }
+        clientNet = new ClientNet();
+        while (clientNet.getChannel()==null){
 
-
-
+        }
+        auth();
         insertButton.setDisable(true);//Сначало надо что то скопировать в буфер
 
         //Настройка колонок таблицы
-        Image dirImg = new Image(this.getClass().getResourceAsStream("/image/folder.png"));
+        Image dirImg = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/image/folder.png")));
         TableColumn<FileInfo, String> fileTypeColumn = new TableColumn<>();
         fileTypeColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getFileType().getName()));
         fileTypeColumn.setCellFactory(column -> {
@@ -154,6 +157,8 @@ public class MainController implements Initializable {
                             getSelectionModel().getSelectedItem().getFileName());
                     if (Files.isDirectory(path)) {
                         updateFileList(path);
+                    }else{
+                        sendFileToServer(path);
                     }
                 }
             }
@@ -198,6 +203,7 @@ public class MainController implements Initializable {
         } catch (IOException e) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Не удалось обновить список файлов по указанному пути", ButtonType.OK);
             alert.showAndWait();
+            log.error(e.getMessage());
         }
     }
 
@@ -227,7 +233,7 @@ public class MainController implements Initializable {
                 updateFileList(Paths.get(pathField.getText()));
             } catch (IOException e) {
                 messageLabel.setText("Файл " + fileInfoTableView.getSelectionModel().getSelectedItem().getFileName() + " не удалось удалить!");
-                e.printStackTrace();
+                log.error(e.getMessage());
             }
         }
 
@@ -235,11 +241,51 @@ public class MainController implements Initializable {
 
     public void synchronizedFile(ActionEvent actionEvent) {
         FileListRequest request = new FileListRequest();
-        ClientNet.getInstance().sendRequest(request);
+
 
     }
 
 
     public void returnAction(ActionEvent actionEvent) {
+    }
+
+    private void sendFileToServer( Path path){
+        FileMessage fileMessage = new FileMessage(ClientProperties.getBUFFER_SIZE());
+        fileMessage.setRelativizePath(Paths.get(ClientProperties.getInstance().getRootDir()).relativize(path).toString());
+
+        try  (FileChannel fc = new FileInputStream(path.toString()).getChannel()){
+            fileMessage.setLastModified(LocalDateTime.ofInstant(Files.getLastModifiedTime(path).toInstant(), ZoneId.systemDefault()));
+            fileMessage.setSize(Files.size(path));
+            fileMessage.getBuffer().clear();
+            while (fc.read(fileMessage.getBuffer())>0||fileMessage.getBuffer().position()>0){
+                clientNet.sendMessage(fileMessage);
+                fileMessage.getBuffer().clear();
+            }
+            fileMessage.setFinal(true);
+            clientNet.sendMessage(fileMessage);
+        }catch (IOException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void auth(){
+        AuthRequest authRequest = new AuthRequest();
+        authRequest.setLogin(ClientProperties.getInstance().getLogin());
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        KeySpec spec = new PBEKeySpec(ClientProperties.getInstance().getPassword().toCharArray(),
+                salt,65536,128);
+        SecretKeyFactory factory = null;
+        try {
+            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            authRequest.setSalt(salt);
+            authRequest.setHashPassword(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+           log.error(e.getMessage());
+        }
+        clientNet.sendMessage(authRequest);
+
     }
 }

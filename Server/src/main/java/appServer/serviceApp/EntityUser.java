@@ -35,6 +35,8 @@ public class EntityUser {
     private OS_TYPE platform;//храним в таблице connection
     @Getter@Setter
     private String ipAddress;//храним в таблице connection
+    @Getter@Setter
+    private String directory;//
 
     public EntityUser(String login, byte[] hashPassword, byte [] salt){
         this.salt = salt;

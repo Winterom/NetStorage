@@ -14,6 +14,8 @@ public class ClientProperties {
     private static final int MIN_LOGIN_LENGTH =4;
     private static final int MIN_PASSWORD_LENGTH =6;
     @Getter
+    private static final int BUFFER_SIZE = 16000;
+    @Getter
     private static final int PORT = 8089;
     @Getter
     private static final String HOST = "localhost";
@@ -73,7 +75,7 @@ public class ClientProperties {
             }else prop.setProperty("sendError","No");
             prop.store(fos,null);
         }catch (IOException e) {
-            log.error("stacktrace ", e);
+            log.error(e.getMessage());
         }
     }
 
@@ -81,7 +83,7 @@ public class ClientProperties {
         try {
             return Files.exists(dir) & Files.isDirectory(dir) & (Files.list(dir).count() == 0);
         } catch (IOException e) {
-           log.error("stacktrace ",e);
+           log.error(e.getMessage());
         }
         return false;
     }

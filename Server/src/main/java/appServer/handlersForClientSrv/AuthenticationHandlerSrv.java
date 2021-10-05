@@ -1,25 +1,19 @@
 package appServer.handlersForClientSrv;
 
-import appServer.serviceApp.EntityUser;
 import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
+import appServer.serviceApp.EntityUser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 import message.AuthRequest;
 import message.AuthResponse;
 import message.Command;
 import message.CommandType;
 
 
-import java.nio.file.Path;
+@Slf4j
+public class AuthenticationHandlerSrv extends SimpleChannelInboundHandler<Command> {
 
-public class AuthenticationHandler extends SimpleChannelInboundHandler<Command> {
-
-    private final ServiceForMonitoring service;
-
-    public AuthenticationHandler( ServiceForMonitoring service){
-
-        this.service = service;
-    }
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Command command) throws Exception {
         if (command.getCommandType() == CommandType.AUTH_REQUEST){
@@ -30,8 +24,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Command> 
             if (user.isAuthentication()){
                 user.setIpAddress(ctx.channel().remoteAddress().toString());
                 authResponse.setCode(200);
+                log.info("Пользователь "+authRequest.getLogin()+" авторизовался");
                 ctx.pipeline().remove(this);
-                ctx.pipeline().addLast(new MessageHandler(user,service));
+                ctx.pipeline().addLast(new MessageHandler(user));
+                //ctx.pipeline().addFirst(new SocketAccounting(new ServiceForMonitoring()));
+                System.out.println(ctx.pipeline().names());
             }else {
                 authResponse.setCode(404);
             }

@@ -1,6 +1,7 @@
 package appServer.serviceApp;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -8,10 +9,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 public class SrvProperties {
-
+    private final static String ROOT_DIR_NAME = "Storage";
     private static volatile SrvProperties instance;
 
     private final Properties prop;
@@ -29,6 +31,8 @@ public class SrvProperties {
     private String password;
     @Getter
     private boolean isGood;
+    @Getter@Setter
+    private Path pathToRootDir;
 
     public static SrvProperties getInstance(){
         if (instance == null){
@@ -42,7 +46,15 @@ public class SrvProperties {
     }
 
     private SrvProperties() {
-
+        this.pathToRootDir = Paths.get((System.getProperty("user.dir")), ROOT_DIR_NAME);
+        if(!Files.exists(pathToRootDir)){
+            try {
+                Files.createDirectory(pathToRootDir);
+            } catch (IOException e) {
+                e.printStackTrace();
+                this.isGood =false;
+            }
+        }
         this.isGood =true;
         this.prop = new Properties();
         if (!Files.exists(Path.of("srv.properties"))) {
