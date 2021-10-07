@@ -6,53 +6,69 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 import message.Command;
-import message.FileMessage;
-import java.io.IOException;
-import java.nio.channels.FileChannel;
+import message.FileMessageHeader;
+import message.FileMessagePart;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.*;
 
 @Slf4j
 public class MessageHandler extends SimpleChannelInboundHandler<Command> {
-   EntityUser user;
-    public MessageHandler(EntityUser user){
+   private final EntityUser user;
+   private Path fileName;
+   private FileMessageHeader fileMessageHeader;
+   FileChannel fileChannel;
+   Path temporaryFileName;
+
+   public MessageHandler(EntityUser user){
         this.user = user;
-        System.out.println("ура создали хэндлер");
-    }
-
-
-    private void fileMessageFromClient(FileMessage fileMessage){
-        String  fileName = Paths.get(fileMessage.getRelativizePath()).getFileName().toString();
-        String tempFileName = fileName.replaceAll("\\.", "")+".temporary";
-        System.out.println("получили сообщение");
-        Path tempFilePath = SrvProperties.getInstance().getPathToRootDir().resolve(Path.of(tempFileName));
-        if(fileMessage.isFinal()){
-            try {
-                Files.move(tempFilePath,tempFilePath.resolveSibling(fileName), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                log.error(e.getMessage());
-            }
-            return;
-        }
-        try(FileChannel fileChannel = FileChannel.open(tempFilePath, StandardOpenOption.APPEND)) {
-            fileChannel.write(fileMessage.getBuffer());
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Command command) throws Exception {
-        System.out.println("ура пришло сообщение");
         switch (command.getCommandType()) {
             case LIST_FILE_REQUEST:break;
-            case FILE_MESSAGE:
-                System.out.println("message handler создан и пришло сообщение");
-                FileMessage fileMessage = (FileMessage) command;
-                fileMessageFromClient(fileMessage);
+            case FILE_MESSAGE_HEADER:
+                this.fileMessageHeader= (FileMessageHeader) command;
+                fileName = Paths.get(fileMessageHeader.getRelativizePath()).getFileName();
+                temporaryFileName = Paths.get(fileName.toString().
+                        replaceAll("\\.","")+".temporary");
+                log.info("получили сообщение с заголовком файла "+fileMessageHeader.getRelativizePath());
+                try (FileChannel fc = FileChannel.open(SrvProperties.getInstance().
+                        getPathToRootDir().resolve(temporaryFileName))){
+                    fileChannel = fc;
+                }catch (IOException e){
+                    log.error(e.getMessage());
+                }
                 break;
+            case FILE_MESSAGE_PART:
+                FileMessagePart part = (FileMessagePart) command;
+                writePartOfFile(part);
             default:
                 System.out.println(command.getCommandType());break;
         }
     }
+
+    private void writePartOfFile(FileMessagePart part) {
+        log.info("Получен пакет "+part.getNumberOfPart());
+        if(fileChannel==null){
+            log.error("Получен пакет в то время как канал закрыт");
+            return;
+        }
+        try {
+            fileChannel.write(ByteBuffer.wrap(part.getBuffer()));
+            if (part.getNumberOfPart()==fileMessageHeader.getQuantityParts()){
+
+                fileChannel.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+
+    }
+
 }

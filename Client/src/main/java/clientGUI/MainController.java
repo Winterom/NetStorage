@@ -12,6 +12,9 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -24,19 +27,17 @@ import message.*;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import java.io.FileInputStream;
+import java.awt.*;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
@@ -158,7 +159,12 @@ public class MainController implements Initializable {
                     if (Files.isDirectory(path)) {
                         updateFileList(path);
                     }else{
-                        sendFileToServer(path);
+                        FileInfo fileInfo = fileInfoTableView.getSelectionModel().getSelectedItem();
+                        fileInfo.setRelativizePath(Paths.get(ClientProperties.getInstance().getRootDir()).
+                                relativize(Paths.get(fileInfo.getFullPath())).toString()
+                        );
+                        sendFileToServer(fileInfo);
+                        //actionForFile(fileInfoTableView.getSelectionModel().getSelectedItem().getFullPath());
                     }
                 }
             }
@@ -249,22 +255,30 @@ public class MainController implements Initializable {
     public void returnAction(ActionEvent actionEvent) {
     }
 
-    private void sendFileToServer( Path path){
-        FileMessage fileMessage = new FileMessage(ClientProperties.getBUFFER_SIZE());
-        fileMessage.setRelativizePath(Paths.get(ClientProperties.getInstance().getRootDir()).relativize(path).toString());
-
-        try  (FileChannel fc = new FileInputStream(path.toString()).getChannel()){
-            fileMessage.setLastModified(LocalDateTime.ofInstant(Files.getLastModifiedTime(path).toInstant(), ZoneId.systemDefault()));
-            fileMessage.setSize(Files.size(path));
-            fileMessage.getBuffer().clear();
-            while (fc.read(fileMessage.getBuffer())>0||fileMessage.getBuffer().position()>0){
-                clientNet.sendMessage(fileMessage);
-                fileMessage.getBuffer().clear();
-            }
-            fileMessage.setFinal(true);
-            clientNet.sendMessage(fileMessage);
-        }catch (IOException e){
-            log.error(e.getMessage());
+    private void sendFileToServer( FileInfo fileInfo) {
+        FileMessageHeader fileMessageHeader = new FileMessageHeader();
+        fileMessageHeader.setSize(fileInfo.getSize());
+        fileMessageHeader.setRelativizePath(fileInfo.getRelativizePath());
+        System.out.println(fileMessageHeader.getRelativizePath());
+        fileMessageHeader.setLastModified(fileInfo.getLastModified());
+        fileMessageHeader.setQuantityParts((int) ((fileInfo.getSize() +
+                ClientProperties.getBUFFER_SIZE() - 1) / ClientProperties.getBUFFER_SIZE()));
+        clientNet.sendMessage(fileMessageHeader);
+        log.info("Количество посылок должно быть " + fileMessageHeader.getQuantityParts());
+        ByteBuffer dst = ByteBuffer.allocate(ClientProperties.getBUFFER_SIZE());
+        //Операция блокирующая поэтому потом поместим в отдельный поток
+        int count =0;
+        try (FileChannel fc = FileChannel.open(Paths.get(fileInfo.getFullPath()))){
+          while (fc.read(dst)>0){
+             count++;
+             FileMessagePart part = new FileMessagePart();
+             part.setBuffer(dst.array());
+             part.setNumberOfPart(count);
+             clientNet.sendMessage(part);
+             dst.clear();
+        }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -287,5 +301,18 @@ public class MainController implements Initializable {
         }
         clientNet.sendMessage(authRequest);
 
+    }
+
+    private void actionForFile(String path){
+        if(Desktop.isDesktopSupported()){
+            Desktop desktop = Desktop.getDesktop();
+            if(desktop.isSupported(Desktop.Action.OPEN)){
+                try {
+                    desktop.open(new File(path));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
