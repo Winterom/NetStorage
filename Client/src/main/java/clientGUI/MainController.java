@@ -30,15 +30,18 @@ import javax.crypto.spec.PBEKeySpec;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -163,7 +166,7 @@ public class MainController implements Initializable {
                         fileInfo.setRelativizePath(Paths.get(ClientProperties.getInstance().getRootDir()).
                                 relativize(Paths.get(fileInfo.getFullPath())).toString()
                         );
-                        sendFileToServer(fileInfo);
+                        clientNet.sendFileToServer(fileInfo);
                         //actionForFile(fileInfoTableView.getSelectionModel().getSelectedItem().getFullPath());
                     }
                 }
@@ -255,32 +258,7 @@ public class MainController implements Initializable {
     public void returnAction(ActionEvent actionEvent) {
     }
 
-    private void sendFileToServer( FileInfo fileInfo) {
-        FileMessageHeader fileMessageHeader = new FileMessageHeader();
-        fileMessageHeader.setSize(fileInfo.getSize());
-        fileMessageHeader.setRelativizePath(fileInfo.getRelativizePath());
-        System.out.println(fileMessageHeader.getRelativizePath());
-        fileMessageHeader.setLastModified(fileInfo.getLastModified());
-        fileMessageHeader.setQuantityParts((int) ((fileInfo.getSize() +
-                ClientProperties.getBUFFER_SIZE() - 1) / ClientProperties.getBUFFER_SIZE()));
-        clientNet.sendMessage(fileMessageHeader);
-        log.info("Количество посылок должно быть " + fileMessageHeader.getQuantityParts());
-        ByteBuffer dst = ByteBuffer.allocate(ClientProperties.getBUFFER_SIZE());
-        //Операция блокирующая поэтому потом поместим в отдельный поток
-        int count =0;
-        try (FileChannel fc = FileChannel.open(Paths.get(fileInfo.getFullPath()))){
-          while (fc.read(dst)>0){
-             count++;
-             FileMessagePart part = new FileMessagePart();
-             part.setBuffer(dst.array());
-             part.setNumberOfPart(count);
-             clientNet.sendMessage(part);
-             dst.clear();
-        }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+
 
     private void auth(){
         AuthRequest authRequest = new AuthRequest();
@@ -302,7 +280,7 @@ public class MainController implements Initializable {
         clientNet.sendMessage(authRequest);
 
     }
-
+    //файл откроется ассоциированым в операционной системе программой
     private void actionForFile(String path){
         if(Desktop.isDesktopSupported()){
             Desktop desktop = Desktop.getDesktop();

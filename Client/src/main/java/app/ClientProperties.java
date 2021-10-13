@@ -14,7 +14,7 @@ public class ClientProperties {
     private static final int MIN_LOGIN_LENGTH =4;
     private static final int MIN_PASSWORD_LENGTH =6;
     @Getter
-    private static final int BUFFER_SIZE = 524288;//2 в 19 степени
+    private static final int BUFFER_SIZE = 32;//2 в 19 степени 524288
     @Getter
     private static final int PORT = 8089;
     @Getter
