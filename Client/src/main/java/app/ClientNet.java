@@ -33,8 +33,8 @@ public class ClientNet {
                             public void initChannel(SocketChannel ch) {
                                 channel = ch;
                                 ch.pipeline().addLast(
-                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
                                         new ObjectEncoder(),
+                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
                                         new AuthenticationHandler()
                                 );
                             }

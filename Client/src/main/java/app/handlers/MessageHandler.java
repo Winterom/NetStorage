@@ -13,6 +13,6 @@ public class MessageHandler extends SimpleChannelInboundHandler<Command> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Command msg) throws Exception {
-        System.out.println(msg);
+        System.out.println(msg+"MessageHandlerClient");
     }
 }
