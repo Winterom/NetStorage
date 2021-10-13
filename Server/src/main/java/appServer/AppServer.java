@@ -69,7 +69,6 @@ public class AppServer {
                     socketChannel.pipeline().addLast(
                             new ObjectEncoder(),
                             new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-
                             new AuthenticationHandlerSrv()//пока кроме auth никаких хендлеров не будет
 
                     );
