@@ -55,7 +55,11 @@
             <artifactId>CoreStorage</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.3.2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -72,7 +76,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>${javafx.maven.plugin.version}</version>
                 <configuration>
-                    <mainClass>StartClient</mainClass>
+                    <mainClass>start.StartClient</mainClass>
                 </configuration>
             </plugin>
         </plugins>

@@ -17,9 +17,6 @@
 .copyButton {
     -fx-background-image: url("../image/copy.png");
 }
-.cutButton {
-    -fx-background-image: url("../image/cut.png");
-}
 .trashButton {
     -fx-background-image: url("../image/trash.png");
 }

@@ -7,5 +7,4 @@ public class FileListRequest extends Command{
         super.setCommandType(CommandType.LIST_FILE_REQUEST);
     }
 
-
 }

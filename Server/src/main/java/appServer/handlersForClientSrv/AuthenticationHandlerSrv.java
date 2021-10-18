@@ -1,6 +1,5 @@
 package appServer.handlersForClientSrv;
 
-import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
 import appServer.serviceApp.EntityUser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -22,13 +21,10 @@ public class AuthenticationHandlerSrv extends SimpleChannelInboundHandler<Comman
                     authRequest.getSalt());
             AuthResponse authResponse = new AuthResponse();
             if (user.isAuthentication()){
-                user.setIpAddress(ctx.channel().remoteAddress().toString());
                 authResponse.setCode(200);
                 log.info("Пользователь "+authRequest.getLogin()+" авторизовался");
                 ctx.pipeline().remove(this);
                 ctx.pipeline().addLast(new MessageHandler(user));
-                //ctx.pipeline().addFirst(new SocketAccounting(new ServiceForMonitoring()));
-                System.out.println(ctx.pipeline().names());
             }else {
                 authResponse.setCode(404);
             }

@@ -2,6 +2,7 @@ package app;
 
 
 import app.handlers.AuthenticationHandler;
+import clientGUI.MainController;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -9,26 +10,30 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.*;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import message.*;
+import message.AuthRequest;
+import message.Command;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 
 
 @Slf4j
 public class ClientNet {
+    private Thread thread;
     @Getter
     private SocketChannel channel;
 
-    public ClientNet() {
-        Thread thread = new Thread(() -> {
+    public ClientNet(MainController mainController) {
+        this.thread = new Thread(() -> {
             EventLoopGroup workerGroup = new NioEventLoopGroup();
             try {
                 Bootstrap bootstrap = new Bootstrap();
@@ -42,7 +47,7 @@ public class ClientNet {
                                 ch.pipeline().addLast(
                                         new ObjectEncoder(),
                                         new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                                        new AuthenticationHandler()
+                                        new AuthenticationHandler(mainController)
                                 );
                             }
                         });
@@ -59,43 +64,32 @@ public class ClientNet {
     }
 
     public void sendMessage(Command command) {
-        System.out.println(command);
         this.channel.writeAndFlush(command);
     }
-    public void sendFileToServer( FileInfo fileInfo) {
-        FileMessageHeader fileMessageHeader = new FileMessageHeader();
-        fileMessageHeader.setSize(fileInfo.getSize());
-        fileMessageHeader.setRelativizePath(fileInfo.getRelativizePath());
-        System.out.println(fileMessageHeader.getRelativizePath());
-        fileMessageHeader.setLastModified(fileInfo.getLastModified());
-        fileMessageHeader.setQuantityParts((int) ((fileInfo.getSize() +
-                ClientProperties.getBUFFER_SIZE() - 1) / ClientProperties.getBUFFER_SIZE()));
-        sendMessage(fileMessageHeader);
-        log.info("Количество посылок должно быть " + fileMessageHeader.getQuantityParts());
-        ByteBuffer dst = ByteBuffer.allocate(ClientProperties.getBUFFER_SIZE());
-        //Операция блокирующая поэтому потом поместим в отдельный поток
-        int count =0;
+    public void stop(){
+        thread.interrupt();
+    }
 
 
-        try (FileChannel fc = FileChannel.open(Path.of(fileInfo.getFullPath()), StandardOpenOption.READ)){
-            while (true){
-                int n = fc.read(dst);
-                if (!(n>0)){
-                    break;
-                }
-                dst.flip();
-                FileMessagePart part = new FileMessagePart();
-                System.out.println(Charset.defaultCharset().decode(dst));
-                count++;
-                part.setCountOfData(n);
-                part.setBuffer(dst.array());
-                part.setNumberOfPart(count);
-                channel.writeAndFlush(part);
-                dst.clear();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void auth(){
+        AuthRequest authRequest = new AuthRequest();
+        authRequest.setLogin(ClientProperties.getInstance().getLogin());
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        KeySpec spec = new PBEKeySpec(ClientProperties.getInstance().getPassword().toCharArray(),
+                salt,65536,128);
+        SecretKeyFactory factory = null;
+        try {
+            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            authRequest.setSalt(salt);
+            authRequest.setHashPassword(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            log.error(e.getMessage());
         }
+        sendMessage(authRequest);
+
     }
 
 

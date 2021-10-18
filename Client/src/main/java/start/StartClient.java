@@ -1,3 +1,6 @@
+package start;
+
+import clientGUI.MainController;
 import javafx.application.Application;
 import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
@@ -21,7 +24,7 @@ public class StartClient extends Application {
     }
 
     private void closeProgram(Event event){
-        //Нужно перехватить событие закрытия окна программы
+        MainController.clientNet.stop();
     }
 
 

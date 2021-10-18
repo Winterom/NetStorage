@@ -3,7 +3,9 @@ package message;
 import lombok.Getter;
 import lombok.Setter;
 
-public class FileMessagePart extends Command{
+import java.io.Serializable;
+
+public class FileMessagePart extends Command implements Serializable {
     @Getter@Setter
     private byte[] buffer;//буфер с данными
     @Getter@Setter
