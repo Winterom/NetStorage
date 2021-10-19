@@ -3,6 +3,7 @@ package message;
 public enum CommandType {
     AUTH_REQUEST,
     AUTH_RESPONSE,
+    FILE_DELETE_MESSAGE,
     FILE_MESSAGE_HEADER,
     FILE_MESSAGE_PART,
     RESULT_OF_SYNCH_FILE,

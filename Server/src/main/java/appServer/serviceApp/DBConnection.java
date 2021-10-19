@@ -24,7 +24,7 @@ public class DBConnection {
         }
         return instance;
     }
-
+    //закрытие connection должно осуществляться там где вызываем метод
     private DBConnection() {
         urlConnection = SrvProperties.getInstance().getUrl()+
                 SrvProperties.getInstance().getPortDb()+"/"+

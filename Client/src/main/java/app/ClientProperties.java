@@ -4,7 +4,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -14,7 +17,7 @@ public class ClientProperties {
     private static final int MIN_LOGIN_LENGTH =4;
     private static final int MIN_PASSWORD_LENGTH =6;
     @Getter
-    private static final int BUFFER_SIZE = 32;//2 в 19 степени 524288
+    private static final int BUFFER_SIZE = 32768;//2 в 15 степени
     @Getter
     private static final int PORT = 8089;
     @Getter
@@ -80,12 +83,7 @@ public class ClientProperties {
     }
 
     public static boolean validateDirectory(Path dir){
-        try {
-            return Files.exists(dir) & Files.isDirectory(dir) & (Files.list(dir).count() == 0);
-        } catch (IOException e) {
-           log.error(e.getMessage());
-        }
-        return false;
+        return Files.exists(dir) & Files.isDirectory(dir);
     }
     public static boolean validateLogin(String newLogin){
         return  (newLogin.length()> MIN_LOGIN_LENGTH);

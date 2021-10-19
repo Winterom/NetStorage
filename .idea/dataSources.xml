@@ -5,9 +5,23 @@
       <driver-ref>mysql.8</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
-      <jdbc-url>jdbc:mysql://localhost:3306/storage</jdbc-url>
+      <jdbc-url>jdbc:mysql://localhost:3330/storage</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <time-zone>Europe/Moscow</time-zone>
+    </data-source>
+    <data-source source="LOCAL" name="6771F21A1A41A871E2ECA314D45DBA01winterom" uuid="768820c7-8eab-47a3-a188-af2242f0d280">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:C:\Users\ACER\IdeaProjects\NetStorage\Storage\6771F21A1A41A871E2ECA314D45DBA01winterom</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="8DD27050A426C0D4BEDC06CBED50341Ewinterom" uuid="b51cd942-68fb-458a-864b-2690b868ba27">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:C:\Users\ACER\IdeaProjects\NetStorage\Storage\8DD27050A426C0D4BEDC06CBED50341Ewinterom</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>
 </project>

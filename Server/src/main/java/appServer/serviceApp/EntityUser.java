@@ -6,23 +6,21 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 
 @Slf4j
 public class EntityUser {
-    public enum OS_TYPE{
-        Android,
-        Windows,
-        OSXMACOS
-    }
     @Getter@Setter
     private boolean isAuthentication;
+    @Getter@Setter
+    private int id;
     @Getter@Setter
     private String login; //храним в таблице users
     @Getter@Setter
@@ -30,13 +28,7 @@ public class EntityUser {
     @Getter@Setter
     private byte[] hashPassword;   //вычисляем или получаем в запросе
     @Getter@Setter
-    private String password = "201219";//храним в таблице users
-    @Getter@Setter
-    private OS_TYPE platform;//храним в таблице connection
-    @Getter@Setter
-    private String ipAddress;//храним в таблице connection
-    @Getter@Setter
-    private String directory;//
+    private String password ;//храним в таблице users
 
     public EntityUser(String login, byte[] hashPassword, byte [] salt){
         this.salt = salt;
@@ -46,6 +38,23 @@ public class EntityUser {
     }
 
     private boolean checkPassword() {
+        Connection connection = DBConnection.getInstance().getConnection();
+        try {
+            PreparedStatement stm = connection.prepareStatement("SELECT password, id from users where login=? and isactive=true;");
+            stm.setString(1,login);
+            ResultSet rs = stm.executeQuery();
+            if(rs.next()){
+                this.password = rs.getString("password");
+                this.id = rs.getInt("id");
+                connection.close();
+            }else{
+                connection.close();
+                return false;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         KeySpec spec = new PBEKeySpec(password.toCharArray(),
                 salt,65536,128);
         try {

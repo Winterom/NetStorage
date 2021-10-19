@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
 public class SrvProperties {
@@ -21,6 +22,8 @@ public class SrvProperties {
     private String driver   = "com.mysql.jdbc.Driver";
     @Getter
     private String url      = "jdbc:mysql://localhost:";
+    @Getter
+    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     @Getter
     private String portDb;
     @Getter

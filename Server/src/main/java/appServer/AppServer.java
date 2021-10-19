@@ -2,8 +2,6 @@ package appServer;
 
 
 import appServer.handlersForClientSrv.AuthenticationHandlerSrv;
-import appServer.handlersForClientSrv.SocketAccounting;
-import appServer.handlersForMonitoringSrv.ServiceForMonitoring;
 import appServer.serviceApp.DBConnection;
 import appServer.serviceApp.SrvProperties;
 import io.netty.bootstrap.ServerBootstrap;
@@ -27,9 +25,10 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.LiquibaseException;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.log4j.*;
-
-
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -44,7 +43,7 @@ public class AppServer {
             return false;
         }
         //Запускаем liquibase
-        runliquibase();
+        runLiquibase();
         //работаем с log4j через slf4j
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         //устанавливаем настройки log4j
@@ -57,7 +56,6 @@ public class AppServer {
 
         EventLoopGroup auth = new NioEventLoopGroup();
         EventLoopGroup worker = new NioEventLoopGroup();
-        ServiceForMonitoring service = new ServiceForMonitoring();
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -100,7 +98,7 @@ public class AppServer {
 
     }
 
-    private void runliquibase() {
+    private void runLiquibase() {
         Connection c = DBConnection.getInstance().getConnection();
         try {
             Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(c));
