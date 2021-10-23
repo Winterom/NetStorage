@@ -16,23 +16,30 @@ public class FileInfo implements Serializable {
 
 
     //Основная цель по расширению подставлять соответствующие значки в таблицу
-    public enum FileType { FILE, DIRECTORY ,WORD,
-        EXCEl,PDF,BMP,JPEG,
-        GIF,PNG,PSD,MP3,AVI,
-        ZIP,PPT,HTML,JS
+    public enum FileType {
+        FILE, DIRECTORY, WORD,
+        EXCEl, PDF, BMP, JPEG,
+        GIF, PNG, PSD, MP3, AVI,
+        ZIP, PPT, HTML, JS
     }
 
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private FileType fileType;
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private long size;
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private LocalDateTime lastModified;
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private int fileSynchronized;//1 -синхронизировано, 0 - не синхронизировано, 2 - это директория
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private String relativizePath;
-    @lombok.Setter @lombok.Getter
+    @lombok.Setter
+    @lombok.Getter
     private String fullPath;
 
 
@@ -41,11 +48,10 @@ public class FileInfo implements Serializable {
         try {
             this.size = Files.size(fullPath);
             this.lastModified = LocalDateTime.ofInstant(Files.getLastModifiedTime(fullPath).toInstant(), ZoneId.systemDefault());
-
-            if(Files.isDirectory(fullPath)){
-                this.fileType =FileType.DIRECTORY;
+            if (Files.isDirectory(fullPath)) {
+                this.fileType = FileType.DIRECTORY;
                 this.size = -1;
-                this.fileSynchronized =2;
+                this.fileSynchronized = 2;
                 return;
             }
             switch (getFileExtension(fullPath.getFileName().toString())) {
@@ -67,11 +73,19 @@ public class FileInfo implements Serializable {
             }
 
 
-
         } catch (IOException e) {
+            //в случае если файл перестал существовать
+            //(обычно это ворд и эксель которые насоздают временных файлов а потом поудаляют нафиг)
+            //поэтому watcherService может передать путь на уже не существующий файл
+            //создаем элемент заглушку
+            size =0;
+            fileType = FileType.FILE;
+            lastModified = LocalDateTime.now();
+            e.printStackTrace();
             log.error(e.getMessage());
         }
     }
+
     public String getFileName() {
         return Path.of(fullPath).getFileName().toString();
     }
@@ -90,6 +104,6 @@ public class FileInfo implements Serializable {
     }
 
     private static String getFileExtension(String filename) {
-       return FilenameUtils.getExtension(filename);
+        return FilenameUtils.getExtension(filename);
     }
 }
