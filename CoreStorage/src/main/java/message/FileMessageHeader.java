@@ -12,7 +12,8 @@ public class FileMessageHeader extends Command{
     private LocalDateTime lastModified; //храним в базе  данных
     @lombok.Setter @lombok.Getter
     private String relativizePath;//храним в базе  данных
-
+    @lombok.Setter @lombok.Getter
+    private long crc32file;
 
     public FileMessageHeader(){
         super.setCommandType(CommandType.FILE_MESSAGE_HEADER);

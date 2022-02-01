@@ -4,6 +4,8 @@ import app.ClientNet;
 import app.ClientProperties;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -31,9 +33,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
@@ -44,8 +44,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MainController implements Initializable {
     public static ClientNet clientNet;
+    public static Thread watcherThread;
 
     public Set<FileInfo> fileList = new HashSet<>(); //Перечень всех файлов и директорий в хранилище
+    WatchService watchService;
+    WatchKey watchKey;
+
     @FXML
     public Button returnButton;
 
@@ -77,6 +81,12 @@ public class MainController implements Initializable {
         }
         //авторизуемся
         clientNet.auth();
+
+        try {
+            this.watchService = FileSystems.getDefault().newWatchService();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         //Настройка колонок таблицы
         Image dirImg = new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("/image/folder.png")));
@@ -241,7 +251,22 @@ public class MainController implements Initializable {
                 fileSizeColumn, fileModifiedColumn, fileSyncColumn);
 
         fileInfoTableView.getSortOrder().add(fileTypeColumn);
+        //вешаем листенер на изменение текущего пути
+        pathField.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
 
+                try {
+                    watchKey=Path.of(newValue).register(watchService,
+                            StandardWatchEventKinds.ENTRY_CREATE,
+                            StandardWatchEventKinds.ENTRY_DELETE,
+                            StandardWatchEventKinds.ENTRY_MODIFY);
+                    updateFileList(Path.of(newValue));
+                } catch (IOException e) {
+                    log.error(e.toString());
+                }
+            }
+        });
         //реализуем drag on drop
         fileInfoTableView.setOnDragOver(new EventHandler<DragEvent>() {
             @Override
@@ -249,7 +274,7 @@ public class MainController implements Initializable {
                 if (event.getGestureSource() != fileInfoTableView
                         && event.getDragboard().hasFiles()) {
                     event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-                    updateFileList(Path.of(pathField.getText()));
+                    //updateFileList(Path.of(pathField.getText()));
                 }
                 event.consume();
             }
@@ -272,11 +297,16 @@ public class MainController implements Initializable {
             @Override
             public void handle(MouseEvent mouseEvent) {
                 if (mouseEvent.getClickCount() == 2) {
+                    if (fileInfoTableView.
+                            getSelectionModel().getSelectedItem()==null){
+                        return;
+                    }
                     Path path = Paths.get(pathField.getText()).resolve(fileInfoTableView.
                             getSelectionModel().getSelectedItem().getFileName());
                     if (Files.isDirectory(path)) {
                         previuosPath = Path.of(pathField.getText());
-                        updateFileList(path);
+                        //updateFileList(path);
+                        pathField.setText(path.normalize().toAbsolutePath().toString());
                     } else {
                         actionForFile(fileInfoTableView.getSelectionModel().getSelectedItem().getFullPath());
 
@@ -284,8 +314,25 @@ public class MainController implements Initializable {
                 }
             }
         });
-
-        updateFileList(Paths.get(ClientProperties.getInstance().getRootDir()));
+        pathField.setText(ClientProperties.getInstance().getRootDir());
+        watcherThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        if ((watchKey = watchService.take()) == null) break;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    for (WatchEvent<?> event : watchKey.pollEvents()) {
+                        updateFileList(Path.of(pathField.getText()));
+                    }
+                    watchKey.reset();
+                }
+            }
+        });
+        watcherThread.setDaemon(true);
+        watcherThread.start();
     }
     //копирует файлы с директориями и поддиректориями в отдельном потоке
     private void copyFilesAndDirectories(List<File> files) {
@@ -301,8 +348,9 @@ public class MainController implements Initializable {
                             FileUtils.copyFileToDirectory(f, new File(pathField.getText()));
                         }
                     }
-                    updateFileList(Path.of(pathField.getText()));
+                    //updateFileList(Path.of(pathField.getText()));
                 } catch (IOException e) {
+                    e.printStackTrace();
                     log.error("error " + e);
                 }
             }
@@ -336,30 +384,29 @@ public class MainController implements Initializable {
     }
     //перемещаемся в родительскую директорию
     public void btnUpPathAction(ActionEvent actionEvent) {
-        Path oldPath = Paths.get(pathField.getText());
-        Path parentPath = Paths.get(pathField.getText()).getParent();
-        if (oldPath.relativize(parentPath).toString().equals("..")) {
-            updateFileList(Path.of(ClientProperties.getInstance().getRootDir()));
+        Path oldPath = Path.of(pathField.getText());
+        Path parentPath = Path.of(pathField.getText()).getParent();
+        if (oldPath.equals(Path.of(ClientProperties.getInstance().getRootDir()))) {
             return;
         }
-        updateFileList(parentPath);
+        //updateFileList(parentPath);
+        pathField.setText(parentPath.normalize().toAbsolutePath().toString());
     }
     //обновляем текущий каталог
     public void updateFileList(Path path) {
-        //normalize нужно что бы убрать всякие условные переходы типа ".", "../.." и т д
-        pathField.setText(path.normalize().toAbsolutePath().toString());
         fileInfoTableView.getItems().clear();
         try {
-            fileInfoTableView.getItems().addAll(Files.list(path).map(new Function<Path, FileInfo>() {
 
+            fileInfoTableView.getItems().addAll(Files.list(path).map(new Function<Path, FileInfo>() {
                 @Override
                 public FileInfo apply(Path path) {
                    FileInfo fileInfo = new FileInfo(path);
+
                    String relPath = (Path.of(ClientProperties.getInstance().getRootDir()).relativize(path)).normalize().toString();
-                   fileInfo.setRelativizePath(relPath);
                     if (Files.isDirectory(path)) {
                         fileInfo.setFileSynchronized(2);
                     }else {
+                        fileInfo.setRelativizePath(relPath);
                         fileInfo.setFileSynchronized(getSynchronized(fileInfo));
                     }
                    return fileInfo;
@@ -377,6 +424,9 @@ public class MainController implements Initializable {
         Clipboard clipboard = Clipboard.getSystemClipboard();
         ClipboardContent content = new ClipboardContent();
         ArrayList<File> files = new ArrayList<>(1);
+        if (fileInfoTableView.getSelectionModel().getSelectedItem()==null){
+            return;
+        }
         files.add(new File(fileInfoTableView.getSelectionModel().getSelectedItem().getFullPath()));
         content.putFiles(files);
         clipboard.setContent(content);
@@ -411,14 +461,13 @@ public class MainController implements Initializable {
                 }else{
                     Files.delete(tp);
                 }
-                messageLabel.setText("Файл или директория" + fileInfoTableView.getSelectionModel().getSelectedItem().getFileName() + " успешно удален!");
-                updateFileList(Paths.get(pathField.getText()));
+                messageLabel.setText("Файл или директория " + fileInfoTableView.getSelectionModel().getSelectedItem().getFileName() + " успешно удален!");
+                //updateFileList(Paths.get(pathField.getText()));
             } catch (IOException e) {
                 messageLabel.setText("Файл " + fileInfoTableView.getSelectionModel().getSelectedItem().getFileName() + " не удалось удалить!");
                 log.error(e.getMessage());
             }
         }
-
     }
 
     //Запрашиваем перечень файлов
@@ -432,7 +481,8 @@ public class MainController implements Initializable {
         if (previuosPath == null) {
             return;
         }
-        updateFileList(previuosPath);
+        //updateFileList(previuosPath);
+        pathField.setText(previuosPath.normalize().toAbsolutePath().toString());
     }
 
 

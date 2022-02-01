@@ -7,7 +7,9 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import message.*;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -79,7 +81,6 @@ public class MessageHandler extends SimpleChannelInboundHandler<Command> {
         Platform.runLater(new Runnable() {
             public void run() {
                 mainController.synchButton.setDisable(false);
-                mainController.updateFileList(Path.of(mainController.pathField.getText()));
                 mainController.messageLabel.setText("Все файлы синхронизированы");
             }
         });
@@ -105,6 +106,11 @@ public class MessageHandler extends SimpleChannelInboundHandler<Command> {
     public void sendFileToServer(FileInfo fileInfo, ChannelHandlerContext ctx) {
         FileMessageHeader fileMessageHeader = new FileMessageHeader();
         fileMessageHeader.setSize(fileInfo.getSize());
+        try {
+            fileMessageHeader.setCrc32file(FileUtils.checksumCRC32(new File(fileInfo.getFullPath())));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         fileMessageHeader.setRelativizePath(fileInfo.getRelativizePath());
         System.out.println(fileMessageHeader.getRelativizePath());
         fileMessageHeader.setLastModified(fileInfo.getLastModified());
